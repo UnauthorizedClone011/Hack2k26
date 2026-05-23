@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,6 +17,8 @@ import {
 import API from '../config';
 import './BusinessDashboard.css';
 
+const API_BASE = API || 'https://i-cockroach.onrender.com';
+
 const CATEGORY_LABELS = {
   'Social Media': 'Social Media',
   Branding: 'Branding',
@@ -24,6 +26,15 @@ const CATEGORY_LABELS = {
   'Growth Outreach': 'Growth/Outreach',
   'Automation Tech': 'Automation/Tech',
   'Research Ops': 'Research/Ops',
+};
+
+const TEST_JOB = {
+  _id: 'test-job-hardcoded',
+  title: 'Test Job — UI Rendering Works ✅',
+  category: 'Social Media',
+  budget: 999,
+  status: 'Open',
+  isTest: true,
 };
 
 function BusinessDashboard() {
@@ -36,42 +47,91 @@ function BusinessDashboard() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const fetchJobs = useCallback(async () => {
-    try {
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchJobs = async () => {
+      console.log('fetching jobs...');
       setLoadingJobs(true);
       setError('');
-      const { data } = await axios.get(`${API}/api/jobs`);
-      setJobs(Array.isArray(data) ? data : []);
-    } catch (err) {
-      setError(
-        err.response?.data?.message || 'Failed to load jobs. Please try again.'
-      );
-    } finally {
-      setLoadingJobs(false);
-    }
+
+      try {
+        const url = `${API_BASE}/api/jobs`;
+        console.log('API URL:', url);
+
+        const response = await axios.get(url);
+        const data = response.data;
+
+        console.log('jobs data:', data);
+
+        if (!isMounted) return;
+
+        if (Array.isArray(data)) {
+          setJobs(data);
+        } else if (data && Array.isArray(data.jobs)) {
+          setJobs(data.jobs);
+        } else {
+          console.warn('Unexpected jobs response shape:', data);
+          setJobs([]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch jobs:', err);
+
+        if (!isMounted) return;
+
+        const message =
+          err.response?.data?.message ||
+          err.message ||
+          'Failed to load jobs from API. Check your connection and try again.';
+
+        setError(`API Error: ${message} (${API_BASE}/api/jobs)`);
+        setJobs([]);
+      } finally {
+        if (isMounted) {
+          setLoadingJobs(false);
+        }
+      }
+    };
+
+    fetchJobs();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const fetchPitches = useCallback(async (job) => {
+  const fetchPitches = async (job) => {
+    if (job.isTest) {
+      setSelectedJob(job);
+      setPitches([]);
+      setSuccessMsg('');
+      setError('');
+      return;
+    }
+
     try {
       setLoadingPitches(true);
       setError('');
-      const { data } = await axios.get(`${API}/api/pitches/job/${job._id}`);
+      console.log('fetching pitches for job:', job._id);
+
+      const { data } = await axios.get(`${API_BASE}/api/pitches/job/${job._id}`);
+      console.log('pitches data:', data);
+
       setPitches(Array.isArray(data) ? data : []);
       setSelectedJob(job);
       setSuccessMsg('');
     } catch (err) {
+      console.error('Failed to fetch pitches:', err);
       setPitches([]);
       setError(
-        err.response?.data?.message || 'Failed to load pitches for this job.'
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to load pitches for this job.'
       );
     } finally {
       setLoadingPitches(false);
     }
-  }, []);
-
-  useEffect(() => {
-    fetchJobs();
-  }, [fetchJobs]);
+  };
 
   const closePitches = () => {
     setSelectedJob(null);
@@ -80,17 +140,23 @@ function BusinessDashboard() {
   };
 
   const handleAccept = async (pitchId) => {
+    if (!selectedJob || selectedJob.isTest) return;
+
     try {
       setActionLoading(pitchId);
       setSuccessMsg('');
-      const { data } = await axios.patch(`${API}/api/pitches/${pitchId}/accept`);
+      const { data } = await axios.patch(
+        `${API_BASE}/api/pitches/${pitchId}/accept`
+      );
       setPitches(data.pitches || []);
       setJobs((prev) =>
         prev.map((j) =>
           j._id === selectedJob._id ? { ...j, status: 'In Progress' } : j
         )
       );
-      setSelectedJob((prev) => (prev ? { ...prev, status: 'In Progress' } : prev));
+      setSelectedJob((prev) =>
+        prev ? { ...prev, status: 'In Progress' } : prev
+      );
       setSuccessMsg('✅ Pitch Accepted! Job is now In Progress');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to accept pitch.');
@@ -100,9 +166,11 @@ function BusinessDashboard() {
   };
 
   const handleReject = async (pitchId) => {
+    if (!selectedJob || selectedJob.isTest) return;
+
     try {
       setActionLoading(pitchId);
-      const { data } = await axios.patch(`${API}/api/pitches/${pitchId}`, {
+      const { data } = await axios.patch(`${API_BASE}/api/pitches/${pitchId}`, {
         status: 'Rejected',
       });
       setPitches((prev) => prev.map((p) => (p._id === pitchId ? data : p)));
@@ -113,7 +181,7 @@ function BusinessDashboard() {
     }
   };
 
-  const formatMoney = (n) => Number(n).toLocaleString('en-IN');
+  const formatMoney = (n) => Number(n || 0).toLocaleString('en-IN');
 
   const getStatusClass = (status) => {
     const s = status?.replace(/\s/g, '-');
@@ -121,6 +189,43 @@ function BusinessDashboard() {
     if (s === 'In-Progress') return 'status-progress';
     if (s === 'Completed') return 'status-completed';
     return 'status-default';
+  };
+
+  const apiJobs = jobs.filter((j) => j._id !== TEST_JOB._id);
+  const displayJobs = [TEST_JOB, ...apiJobs];
+
+  const renderJobCard = (job, i) => {
+    const catLabel = CATEGORY_LABELS[job.category] || job.category || 'General';
+
+    return (
+      <motion.article
+        key={job._id}
+        className={`job-card ${job.isTest ? 'job-card-test' : ''}`}
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: i * 0.06, duration: 0.45 }}
+        whileHover={{ y: -4 }}
+      >
+        {job.isTest && <span className="test-badge">TEST CARD</span>}
+        <div className="job-card-header">
+          <span className="category-badge">{catLabel}</span>
+          <span className={`status-badge ${getStatusClass(job.status)}`}>
+            {job.status || 'Open'}
+          </span>
+        </div>
+        <h3 className="job-title">{job.title}</h3>
+        <p className="job-budget">
+          <FaRupeeSign /> ₹{formatMoney(job.budget)}
+        </p>
+        <button
+          type="button"
+          className="btn-view-pitches"
+          onClick={() => fetchPitches(job)}
+        >
+          <FaEye /> View Pitches 👁️
+        </button>
+      </motion.article>
+    );
   };
 
   return (
@@ -141,8 +246,12 @@ function BusinessDashboard() {
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          {error}
-          <button type="button" onClick={() => setError('')} aria-label="Dismiss">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError('')}
+            aria-label="Dismiss"
+          >
             <FaTimes />
           </button>
         </motion.div>
@@ -151,12 +260,18 @@ function BusinessDashboard() {
       <section className="biz-jobs-section">
         <h2 className="section-heading">Your Jobs</h2>
 
-        {loadingJobs ? (
+        {loadingJobs && (
           <div className="biz-loading">
             <span className="biz-spinner" />
-            <p>Loading jobs...</p>
+            <p>Loading jobs from API...</p>
           </div>
-        ) : jobs.length === 0 ? (
+        )}
+
+        <div className="jobs-grid">
+          {displayJobs.map((job, i) => renderJobCard(job, i))}
+        </div>
+
+        {!loadingJobs && apiJobs.length === 0 && (
           <motion.div
             className="biz-empty"
             initial={{ opacity: 0, scale: 0.96 }}
@@ -167,40 +282,6 @@ function BusinessDashboard() {
               Post a Job →
             </Link>
           </motion.div>
-        ) : (
-          <div className="jobs-grid">
-            {jobs.map((job, i) => {
-              const catLabel = CATEGORY_LABELS[job.category] || job.category;
-              return (
-                <motion.article
-                  key={job._id}
-                  className="job-card"
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.06, duration: 0.45 }}
-                  whileHover={{ y: -4 }}
-                >
-                  <div className="job-card-header">
-                    <span className="category-badge">{catLabel}</span>
-                    <span className={`status-badge ${getStatusClass(job.status)}`}>
-                      {job.status}
-                    </span>
-                  </div>
-                  <h3 className="job-title">{job.title}</h3>
-                  <p className="job-budget">
-                    <FaRupeeSign /> ₹{formatMoney(job.budget)}
-                  </p>
-                  <button
-                    type="button"
-                    className="btn-view-pitches"
-                    onClick={() => fetchPitches(job)}
-                  >
-                    <FaEye /> View Pitches 👁️
-                  </button>
-                </motion.article>
-              );
-            })}
-          </div>
         )}
       </section>
 
@@ -215,146 +296,154 @@ function BusinessDashboard() {
               onClick={closePitches}
             />
             <div className="modal-wrapper">
-            <motion.div
-              className="pitches-modal"
-              initial={{ opacity: 0, y: 40, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 40, scale: 0.96 }}
-              transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-            >
-              <div className="modal-header">
-                <div>
-                  <h2>Pitches for</h2>
-                  <p className="modal-job-title">{selectedJob.title}</p>
-                </div>
-                <button
-                  type="button"
-                  className="modal-close"
-                  onClick={closePitches}
-                  aria-label="Close"
-                >
-                  <FaTimes />
-                </button>
-              </div>
-
-              <AnimatePresence>
-                {successMsg && (
-                  <motion.div
-                    className="biz-success-banner"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
+              <motion.div
+                className="pitches-modal"
+                initial={{ opacity: 0, y: 40, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 40, scale: 0.96 }}
+                transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+              >
+                <div className="modal-header">
+                  <div>
+                    <h2>Pitches for</h2>
+                    <p className="modal-job-title">{selectedJob.title}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="modal-close"
+                    onClick={closePitches}
+                    aria-label="Close"
                   >
-                    {successMsg}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    <FaTimes />
+                  </button>
+                </div>
 
-              {loadingPitches ? (
-                <div className="biz-loading modal-loading">
-                  <span className="biz-spinner" />
-                  <p>Loading pitches...</p>
-                </div>
-              ) : pitches.length === 0 ? (
-                <div className="biz-empty modal-empty">
-                  <p>No pitches yet</p>
-                </div>
-              ) : (
-                <div className="pitches-scroll">
-                  {pitches.map((pitch, i) => (
+                <AnimatePresence>
+                  {successMsg && (
                     <motion.div
-                      key={pitch._id}
-                      className={`pitch-card pitch-${pitch.status?.toLowerCase()}`}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.05, duration: 0.35 }}
+                      className="biz-success-banner"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
                     >
-                      <div className="pitch-row">
-                        <FaUser className="pitch-icon" />
-                        <div>
-                          <span className="pitch-label">Student</span>
-                          <strong>{pitch.studentName}</strong>
-                        </div>
-                        <span className={`pitch-tag tag-${pitch.status?.toLowerCase()}`}>
-                          {pitch.status}
-                        </span>
-                      </div>
-
-                      <div className="pitch-row">
-                        <FaGraduationCap className="pitch-icon" />
-                        <div>
-                          <span className="pitch-label">College</span>
-                          <p>{pitch.college}</p>
-                        </div>
-                      </div>
-
-                      <div className="pitch-row block">
-                        <FaComment className="pitch-icon" />
-                        <div>
-                          <span className="pitch-label">Intro</span>
-                          <p>{pitch.intro}</p>
-                        </div>
-                      </div>
-
-                      <div className="pitch-row block">
-                        <FaStar className="pitch-icon" />
-                        <div>
-                          <span className="pitch-label">Why Me</span>
-                          <p>{pitch.whyMe}</p>
-                        </div>
-                      </div>
-
-                      <div className="pitch-meta-grid">
-                        <div className="pitch-meta">
-                          <span className="pitch-label">💰 Their Price</span>
-                          <strong className="price-text">
-                            ₹{formatMoney(pitch.cost)}
-                          </strong>
-                        </div>
-                        <div className="pitch-meta">
-                          <span className="pitch-label">
-                            <FaClock /> Timeline
-                          </span>
-                          <strong>{pitch.timeline} days</strong>
-                        </div>
-                      </div>
-
-                      {pitch.portfolioLink && (
-                        <a
-                          href={pitch.portfolioLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="portfolio-link"
-                        >
-                          <FaLink /> Portfolio link <FaExternalLinkAlt />
-                        </a>
-                      )}
-
-                      {pitch.status === 'Pending' && (
-                        <div className="pitch-actions">
-                          <button
-                            type="button"
-                            className="btn-accept"
-                            disabled={!!actionLoading}
-                            onClick={() => handleAccept(pitch._id)}
-                          >
-                            {actionLoading === pitch._id ? 'Accepting...' : '✅ Accept'}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-reject"
-                            disabled={!!actionLoading}
-                            onClick={() => handleReject(pitch._id)}
-                          >
-                            ❌ Reject
-                          </button>
-                        </div>
-                      )}
+                      {successMsg}
                     </motion.div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {selectedJob.isTest ? (
+                  <div className="biz-empty modal-empty">
+                    <p>This is a test card. Post a real job to see pitches.</p>
+                  </div>
+                ) : loadingPitches ? (
+                  <div className="biz-loading modal-loading">
+                    <span className="biz-spinner" />
+                    <p>Loading pitches...</p>
+                  </div>
+                ) : pitches.length === 0 ? (
+                  <div className="biz-empty modal-empty">
+                    <p>No pitches yet</p>
+                  </div>
+                ) : (
+                  <div className="pitches-scroll">
+                    {pitches.map((pitch, i) => (
+                      <motion.div
+                        key={pitch._id}
+                        className={`pitch-card pitch-${pitch.status?.toLowerCase()}`}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05, duration: 0.35 }}
+                      >
+                        <div className="pitch-row">
+                          <FaUser className="pitch-icon" />
+                          <div>
+                            <span className="pitch-label">Student</span>
+                            <strong>{pitch.studentName}</strong>
+                          </div>
+                          <span
+                            className={`pitch-tag tag-${pitch.status?.toLowerCase()}`}
+                          >
+                            {pitch.status}
+                          </span>
+                        </div>
+
+                        <div className="pitch-row">
+                          <FaGraduationCap className="pitch-icon" />
+                          <div>
+                            <span className="pitch-label">College</span>
+                            <p>{pitch.college}</p>
+                          </div>
+                        </div>
+
+                        <div className="pitch-row block">
+                          <FaComment className="pitch-icon" />
+                          <div>
+                            <span className="pitch-label">Intro</span>
+                            <p>{pitch.intro}</p>
+                          </div>
+                        </div>
+
+                        <div className="pitch-row block">
+                          <FaStar className="pitch-icon" />
+                          <div>
+                            <span className="pitch-label">Why Me</span>
+                            <p>{pitch.whyMe}</p>
+                          </div>
+                        </div>
+
+                        <div className="pitch-meta-grid">
+                          <div className="pitch-meta">
+                            <span className="pitch-label">💰 Their Price</span>
+                            <strong className="price-text">
+                              ₹{formatMoney(pitch.cost)}
+                            </strong>
+                          </div>
+                          <div className="pitch-meta">
+                            <span className="pitch-label">
+                              <FaClock /> Timeline
+                            </span>
+                            <strong>{pitch.timeline} days</strong>
+                          </div>
+                        </div>
+
+                        {pitch.portfolioLink && (
+                          <a
+                            href={pitch.portfolioLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="portfolio-link"
+                          >
+                            <FaLink /> Portfolio link <FaExternalLinkAlt />
+                          </a>
+                        )}
+
+                        {pitch.status === 'Pending' && (
+                          <div className="pitch-actions">
+                            <button
+                              type="button"
+                              className="btn-accept"
+                              disabled={!!actionLoading}
+                              onClick={() => handleAccept(pitch._id)}
+                            >
+                              {actionLoading === pitch._id
+                                ? 'Accepting...'
+                                : '✅ Accept'}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-reject"
+                              disabled={!!actionLoading}
+                              onClick={() => handleReject(pitch._id)}
+                            >
+                              ❌ Reject
+                            </button>
+                          </div>
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
             </div>
           </>
         )}
