@@ -44,6 +44,27 @@ router.get('/job/:jobId', async (req, res) => {
   }
 });
 
+// PATCH /api/pitches/:id - update pitch (e.g. status)
+router.patch('/:id', async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!status) {
+      return res.status(400).json({ message: 'Status is required' });
+    }
+    const pitch = await Pitch.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true, runValidators: true }
+    );
+    if (!pitch) {
+      return res.status(404).json({ message: 'Pitch not found' });
+    }
+    res.json(pitch);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
 // PATCH /api/pitches/:id/reject - reject a pitch
 router.patch('/:id/reject', async (req, res) => {
   try {
