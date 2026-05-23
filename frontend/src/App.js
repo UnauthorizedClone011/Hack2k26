@@ -9,6 +9,14 @@ import StudentDashboard from './pages/StudentDashboard';
 import BusinessDashboard from './pages/BusinessDashboard';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import AboutUs from './pages/AboutUs';
+import Contact from './pages/Contact';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import Pricing from './pages/Pricing';
+import BrowseTalent from './pages/BrowseTalent';
+import GetVerified from './pages/GetVerified';
+import TrustTiers from './pages/TrustTiers';
 import './App.css';
 
 function App() {
@@ -26,6 +34,14 @@ function App() {
             <Route path="/business-dashboard" element={<BusinessDashboard />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/about" element={<AboutUs />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/browse-talent" element={<BrowseTalent />} />
+            <Route path="/get-verified" element={<GetVerified />} />
+            <Route path="/trust-tiers" element={<TrustTiers />} />
           </Routes>
         </main>
         <Footer />

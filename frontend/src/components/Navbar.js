@@ -7,9 +7,7 @@ function Navbar() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
 
-  const loadUser = () => {
-    setUser(getUser());
-  };
+  const loadUser = () => setUser(getUser());
 
   useEffect(() => {
     loadUser();
@@ -37,53 +35,30 @@ function Navbar() {
 
         <ul className="navbar-links">
           <li>
-            <NavLink to="/" end className="navbar-link">
-              Home
-            </NavLink>
+            <NavLink to="/" end className="navbar-link">Home</NavLink>
           </li>
-          <li>
-            <NavLink to="/jobs" className="navbar-link">
-              Find Work
-            </NavLink>
-          </li>
-          {user?.userType === 'Business' && (
-            <li>
-              <NavLink to="/post-job" className="navbar-link">
-                Post a Job
-              </NavLink>
-            </li>
-          )}
-          {user?.userType === 'Business' && (
-            <li>
-              <NavLink to="/business-dashboard" className="navbar-link">
-                Business
-              </NavLink>
-            </li>
-          )}
-          {user?.userType === 'Student' && (
-            <li>
-              <NavLink to="/student-dashboard" className="navbar-link">
-                Dashboard
-              </NavLink>
-            </li>
-          )}
+
+          {/* NOT logged in */}
           {!user && (
             <>
-              <li>
-                <NavLink to="/post-job" className="navbar-link">
-                  Post a Job
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/business-dashboard" className="navbar-link">
-                  Business
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/student-dashboard" className="navbar-link">
-                  Dashboard
-                </NavLink>
-              </li>
+              <li><NavLink to="/jobs" className="navbar-link">Find Work</NavLink></li>
+              <li><NavLink to="/post-job" className="navbar-link">Post a Job</NavLink></li>
+            </>
+          )}
+
+          {/* Student links */}
+          {user?.userType === 'Student' && (
+            <>
+              <li><NavLink to="/jobs" className="navbar-link">Find Work</NavLink></li>
+              <li><NavLink to="/student-dashboard" className="navbar-link">Dashboard</NavLink></li>
+            </>
+          )}
+
+          {/* Business links */}
+          {user?.userType === 'Business' && (
+            <>
+              <li><NavLink to="/post-job" className="navbar-link">Post a Job</NavLink></li>
+              <li><NavLink to="/business-dashboard" className="navbar-link">Dashboard</NavLink></li>
             </>
           )}
         </ul>
@@ -104,12 +79,8 @@ function Navbar() {
             </>
           ) : (
             <>
-              <Link to="/login" className="navbar-btn navbar-btn-login">
-                Login
-              </Link>
-              <Link to="/signup" className="navbar-btn navbar-btn-signup">
-                Sign Up
-              </Link>
+              <Link to="/login" className="navbar-btn navbar-btn-login">Login</Link>
+              <Link to="/signup" className="navbar-btn navbar-btn-signup">Sign Up</Link>
             </>
           )}
         </div>

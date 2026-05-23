@@ -13,8 +13,7 @@ function Footer() {
             <span className="footer-logo">🪳 I-COCKROACH</span>
             <p className="footer-tagline">Instantly. Affordably. Locally.</p>
             <p className="footer-desc">
-              Hyperlocal marketplace connecting SME businesses with verified
-              college talent.
+              Hyperlocal marketplace connecting SME businesses with verified college talent.
             </p>
           </div>
 
@@ -24,8 +23,8 @@ function Footer() {
               <ul>
                 <li><Link to="/post-job">Post a Job</Link></li>
                 <li><Link to="/business-dashboard">Business Dashboard</Link></li>
-                <li><Link to="/jobs">Browse Talent</Link></li>
-                <li><a href="#pricing">Pricing</a></li>
+                <li><Link to="/browse-talent">Browse Talent</Link></li>
+                <li><Link to="/pricing">Pricing</Link></li>
               </ul>
             </div>
 
@@ -34,40 +33,30 @@ function Footer() {
               <ul>
                 <li><Link to="/jobs">Find Work</Link></li>
                 <li><Link to="/student-dashboard">Student Dashboard</Link></li>
-                <li><a href="#verify">Get Verified</a></li>
-                <li><a href="#trust">Trust Tiers</a></li>
+                <li><Link to="/get-verified">Get Verified</Link></li>
+                <li><Link to="/trust-tiers">Trust Tiers</Link></li>
               </ul>
             </div>
 
             <div className="footer-col">
               <h4>Company</h4>
               <ul>
-                <li><a href="#about">About Us</a></li>
-                <li><a href="#contact">Contact</a></li>
-                <li><a href="#privacy">Privacy Policy</a></li>
-                <li><a href="#terms">Terms of Service</a></li>
+                <li><Link to="/about">About Us</Link></li>
+                <li><Link to="/contact">Contact</Link></li>
+                <li><Link to="/privacy">Privacy Policy</Link></li>
+                <li><Link to="/terms">Terms of Service</Link></li>
               </ul>
             </div>
           </div>
         </div>
 
         <div className="footer-bottom">
-          <p className="footer-copy">
-            © {year} I-COCKROACH. All rights reserved.
-          </p>
+          <p className="footer-copy">© {year} I-COCKROACH. All rights reserved.</p>
           <div className="footer-social">
-            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
-              <FaTwitter />
-            </a>
-            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
-              <FaLinkedin />
-            </a>
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-              <FaInstagram />
-            </a>
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-              <FaGithub />
-            </a>
+            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"><FaTwitter /></a>
+            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer"><FaLinkedin /></a>
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"><FaInstagram /></a>
+            <a href="https://github.com/SOHOMGIRI/I-COCKROACH" target="_blank" rel="noopener noreferrer"><FaGithub /></a>
           </div>
         </div>
       </div>
