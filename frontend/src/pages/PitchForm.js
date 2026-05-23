@@ -3,10 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaLink, FaRupeeSign, FaCalendarAlt } from 'react-icons/fa';
+import API from '../config';
 import './PitchForm.css';
-
-const JOBS_API = 'http://localhost:5000/api/jobs';
-const PITCHES_API = 'http://localhost:5000/api/pitches';
 
 const CATEGORY_LABELS = {
   'Social Media': 'Social Media',
@@ -71,7 +69,7 @@ function PitchForm() {
     const fetchJob = async () => {
       try {
         setJobLoading(true);
-        const { data } = await axios.get(`${JOBS_API}/${jobId}`);
+        const { data } = await axios.get(`${API}/api/jobs/${jobId}`);
         setJob(data);
         setJobError('');
       } catch (err) {
@@ -145,7 +143,7 @@ function PitchForm() {
         portfolioLink: form.portfolioLink.trim(),
       };
 
-      await axios.post(PITCHES_API, payload);
+      await axios.post(`${API}/api/pitches`, payload);
       localStorage.setItem('icockroach_student_name', form.studentName.trim());
       localStorage.setItem('icockroach_student_college', form.college.trim());
       setSuccess(true);

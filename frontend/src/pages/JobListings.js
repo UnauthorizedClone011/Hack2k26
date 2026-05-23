@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { FaSearch, FaRupeeSign, FaCalendarAlt, FaBuilding } from 'react-icons/fa';
+import API from '../config';
 import './JobListings.css';
-
-const API_URL = 'http://localhost:5000/api/jobs';
 
 const FILTER_PILLS = [
   { label: 'All', value: 'All' },
@@ -81,7 +80,7 @@ function JobListings() {
     const fetchJobs = async () => {
       try {
         setLoading(true);
-        const { data } = await axios.get(API_URL);
+        const { data } = await axios.get(`${API}/api/jobs`);
         setJobs(Array.isArray(data) ? data : []);
         setError('');
       } catch (err) {

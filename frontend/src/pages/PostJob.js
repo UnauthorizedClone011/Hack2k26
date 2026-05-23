@@ -10,9 +10,8 @@ import {
   FaAlignLeft,
   FaBullseye,
 } from 'react-icons/fa';
+import API from '../config';
 import './PostJob.css';
-
-const API_URL = 'http://localhost:5000/api/jobs';
 
 const CATEGORIES = [
   { label: 'Social Media', value: 'Social Media' },
@@ -83,7 +82,7 @@ function PostJob() {
         postedBy: `${form.businessName.trim()} — ${form.yourName.trim()}`,
       };
 
-      await axios.post(API_URL, payload);
+      await axios.post(`${API}/api/jobs`, payload);
       setSuccess(true);
       setForm(initialForm);
     } catch (err) {

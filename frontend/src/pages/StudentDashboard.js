@@ -8,11 +8,8 @@ import {
   useMotionValue,
   useTransform,
 } from 'framer-motion';
+import API from '../config';
 import './StudentDashboard.css';
-
-const JOBS_API = 'http://localhost:5000/api/jobs';
-const PITCHES_API = 'http://localhost:5000/api/pitches';
-const STUDENTS_API = 'http://localhost:5000/api/students';
 
 const TIERS = ['Bronze', 'Silver', 'Gold', 'Verified Pro'];
 
@@ -112,11 +109,11 @@ function StudentDashboard() {
       try {
         setLoading(true);
         const [jobsRes, pitchesRes, studentsRes] = await Promise.all([
-          axios.get(JOBS_API),
-          axios.get(PITCHES_API, {
+          axios.get(`${API}/api/jobs`),
+          axios.get(`${API}/api/pitches`, {
             params: { studentName },
           }),
-          axios.get(STUDENTS_API),
+          axios.get(`${API}/api/students`),
         ]);
 
         setJobs(Array.isArray(jobsRes.data) ? jobsRes.data : []);
