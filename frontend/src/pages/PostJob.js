@@ -22,9 +22,6 @@ const CATEGORIES = [
   { label: 'Research/Ops', value: 'Research Ops' },
 ];
 
-// ADMIN USER ID — only this person can delete any job
-const ADMIN_USER_ID = 'SOHOMGIRI_ADMIN';
-
 const initialForm = {
   businessName: '',
   yourName: '',
@@ -36,10 +33,9 @@ const initialForm = {
   expectedOutcome: '',
 };
 
-// Get logged in user from localStorage
 const getLoggedInUser = () => {
   try {
-    const user = localStorage.getItem('user');
+    const user = localStorage.getItem('icockroach_user');
     return user ? JSON.parse(user) : null;
   } catch {
     return null;
@@ -88,7 +84,6 @@ function PostJob() {
         ? `${form.description.trim()}\n\n--- Expected Outcome ---\n${form.expectedOutcome.trim()}`
         : form.description.trim();
 
-      // ✅ FIX: Add postedByUserId from logged in user
       const payload = {
         title: form.jobTitle.trim(),
         category: form.category,

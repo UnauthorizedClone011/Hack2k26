@@ -20,10 +20,10 @@ const CATEGORY_LABELS = {
   'Research Ops': 'Research/Ops',
 };
 
-// Get logged in user from localStorage
+// ✅ FIXED - changed 'user' to 'icockroach_user'
 const getLoggedInUser = () => {
   try {
-    const user = localStorage.getItem('user');
+    const user = localStorage.getItem('icockroach_user');
     return user ? JSON.parse(user) : null;
   } catch {
     return null;
@@ -88,17 +88,15 @@ function BusinessDashboard() {
     setSuccessMsg('');
   };
 
-  // Check if logged in user owns this job
   const isJobOwner = (job) => {
     if (!loggedInUser) return false;
-    if (!job.postedByUserId) return true; // old jobs without owner = allow
+    if (!job.postedByUserId) return true;
     return job.postedByUserId === loggedInUser._id ||
            job.postedByUserId === loggedInUser.id;
   };
 
   const handleAccept = async (pitchId) => {
     if (!selectedJob) return;
-    // Security check — only owner can accept
     if (!isJobOwner(selectedJob)) {
       setError('❌ You can only accept pitches for your own jobs!');
       return;
@@ -122,7 +120,6 @@ function BusinessDashboard() {
 
   const handleReject = async (pitchId) => {
     if (!selectedJob) return;
-    // Security check — only owner can reject
     if (!isJobOwner(selectedJob)) {
       setError('❌ You can only reject pitches for your own jobs!');
       return;
@@ -156,12 +153,12 @@ function BusinessDashboard() {
       <motion.article
         key={job._id}
         className="job-card"
+        style={{ position: 'relative' }}
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: i * 0.06, duration: 0.45 }}
         whileHover={{ y: -4 }}
       >
-        {/* Show "YOUR JOB" badge if owned */}
         {owned && (
           <div style={{
             position:'absolute', top:'-10px', right:'10px',
@@ -179,7 +176,6 @@ function BusinessDashboard() {
         </div>
         <h3 className="job-title">{job.title}</h3>
         <p className="job-budget"><FaRupeeSign /> ₹{formatMoney(job.budget)}</p>
-        {/* Anyone can VIEW pitches but only owner can ACCEPT/REJECT */}
         <button
           type="button"
           className="btn-view-pitches"
@@ -265,7 +261,6 @@ function BusinessDashboard() {
                   <div>
                     <h2>Pitches for</h2>
                     <p className="modal-job-title">{selectedJob.title}</p>
-                    {/* Show ownership status in modal */}
                     {isJobOwner(selectedJob) ? (
                       <span style={{color:'#FF6B00',fontSize:'13px',fontWeight:'bold'}}>
                         ✅ Your job — you can accept/reject pitches
@@ -359,7 +354,6 @@ function BusinessDashboard() {
                             <FaLink /> Portfolio <FaExternalLinkAlt />
                           </a>
                         )}
-                        {/* Only show Accept/Reject if you own the job */}
                         {pitch.status === 'Pending' && isJobOwner(selectedJob) && (
                           <div className="pitch-actions">
                             <button
@@ -380,7 +374,6 @@ function BusinessDashboard() {
                             </button>
                           </div>
                         )}
-                        {/* Show message if not owner */}
                         {pitch.status === 'Pending' && !isJobOwner(selectedJob) && (
                           <p style={{color:'#888',fontSize:'12px',textAlign:'center',marginTop:'10px'}}>
                             🔒 Only the job owner can accept or reject pitches
