@@ -20,7 +20,6 @@ const CATEGORY_LABELS = {
   'Research Ops': 'Research/Ops',
 };
 
-// ✅ FIXED - changed 'user' to 'icockroach_user'
 const getLoggedInUser = () => {
   try {
     const user = localStorage.getItem('icockroach_user');
@@ -88,9 +87,10 @@ function BusinessDashboard() {
     setSuccessMsg('');
   };
 
+  // ✅ FIXED - old jobs without postedByUserId now return false
   const isJobOwner = (job) => {
     if (!loggedInUser) return false;
-    if (!job.postedByUserId) return true;
+    if (!job.postedByUserId || job.postedByUserId === '') return false;
     return job.postedByUserId === loggedInUser._id ||
            job.postedByUserId === loggedInUser.id;
   };
