@@ -22,8 +22,8 @@ const CATEGORY_LABELS = {
 
 const getLoggedInUser = () => {
   try {
-    const user = localStorage.getItem('icockroach_user');
-    return user ? JSON.parse(user) : null;
+    const raw = localStorage.getItem('icockroach_user');
+    return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
@@ -47,15 +47,12 @@ function BusinessDashboard() {
       setLoadingJobs(true);
       setError('');
       try {
-        const response = await axios.get(`${API_BASE}/api/jobs`);
-        const data = response.data;
+        const { data } = await axios.get(`${API_BASE}/api/jobs`);
         if (!isMounted) return;
-        if (Array.isArray(data)) setJobs(data);
-        else if (data && Array.isArray(data.jobs)) setJobs(data.jobs);
-        else setJobs([]);
+        setJobs(Array.isArray(data) ? data : []);
       } catch (err) {
         if (!isMounted) return;
-        setError(err.response?.data?.message || err.message || 'Failed to load jobs.');
+        setError(err.response?.data?.message || 'Failed to load jobs.');
         setJobs([]);
       } finally {
         if (isMounted) setLoadingJobs(false);
@@ -85,14 +82,19 @@ function BusinessDashboard() {
     setSelectedJob(null);
     setPitches([]);
     setSuccessMsg('');
+    setError('');
   };
 
-  // ✅ FIXED - old jobs without postedByUserId now return false
+  // ✅ FIXED ownership check with multiple fallbacks
   const isJobOwner = (job) => {
     if (!loggedInUser) return false;
     if (!job.postedByUserId || job.postedByUserId === '') return false;
-    return job.postedByUserId === loggedInUser._id ||
-           job.postedByUserId === loggedInUser.id;
+
+    const jobOwnerId = String(job.postedByUserId).trim();
+    const userId1 = String(loggedInUser._id || '').trim();
+    const userId2 = String(loggedInUser.id || '').trim();
+
+    return jobOwnerId === userId1 || jobOwnerId === userId2;
   };
 
   const handleAccept = async (pitchId) => {
@@ -138,10 +140,9 @@ function BusinessDashboard() {
   const formatMoney = (n) => Number(n || 0).toLocaleString('en-IN');
 
   const getStatusClass = (status) => {
-    const s = status?.replace(/\s/g, '-');
-    if (s === 'Open') return 'status-open';
-    if (s === 'In-Progress') return 'status-progress';
-    if (s === 'Completed') return 'status-completed';
+    if (status === 'Open') return 'status-open';
+    if (status === 'In Progress') return 'status-progress';
+    if (status === 'Completed') return 'status-completed';
     return 'status-default';
   };
 
@@ -163,7 +164,8 @@ function BusinessDashboard() {
           <div style={{
             position:'absolute', top:'-10px', right:'10px',
             background:'#FF6B00', color:'white', padding:'3px 10px',
-            borderRadius:'20px', fontSize:'11px', fontWeight:'bold'
+            borderRadius:'20px', fontSize:'11px', fontWeight:'bold',
+            zIndex: 1
           }}>
             YOUR JOB ✓
           </div>
@@ -175,6 +177,9 @@ function BusinessDashboard() {
           </span>
         </div>
         <h3 className="job-title">{job.title}</h3>
+        <p style={{color:'#888',fontSize:'12px',margin:'4px 0 8px 0'}}>
+          Posted by: {job.postedBy}
+        </p>
         <p className="job-budget"><FaRupeeSign /> ₹{formatMoney(job.budget)}</p>
         <button
           type="button"
@@ -184,7 +189,7 @@ function BusinessDashboard() {
           <FaEye /> View Pitches 👁️
         </button>
         {!owned && (
-          <p style={{color:'#888',fontSize:'12px',marginTop:'8px',textAlign:'center'}}>
+          <p style={{color:'#666',fontSize:'11px',marginTop:'6px',textAlign:'center'}}>
             👁️ View only — not your job
           </p>
         )}
@@ -203,8 +208,8 @@ function BusinessDashboard() {
         <h1>Business Dashboard 🏢</h1>
         <p>Review pitches and manage your jobs</p>
         {loggedInUser && (
-          <p style={{color:'#FF6B00',marginTop:'8px',fontWeight:'bold'}}>
-            Logged in as: {loggedInUser.name} ({loggedInUser.userType})
+          <p style={{color:'#FF6B00',marginTop:'8px',fontWeight:'bold',fontSize:'14px'}}>
+            Logged in as: {loggedInUser.name} | User ID: {loggedInUser._id || loggedInUser.id}
           </p>
         )}
       </motion.header>

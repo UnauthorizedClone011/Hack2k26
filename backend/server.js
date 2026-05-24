@@ -31,6 +31,9 @@ app.use('/api/jobs', require('./routes/jobs'));
 app.use('/api/students', require('./routes/students'));
 app.use('/api/pitches', require('./routes/pitches'));
 
+// ✅ Mount the enhance route so frontend can call /api/enhance
+app.use('/api/enhance', require('./routes/enhance'));
+
 // Root route
 app.get('/', (req, res) => {
   res.send('🪳 I-COCKROACH API Running');

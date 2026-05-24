@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const Job = require('../models/Job');
 
-// GET /api/jobs - get all jobs sorted newest first
 router.get('/', async (req, res) => {
   try {
     const jobs = await Job.find().sort({ createdAt: -1 });
@@ -12,7 +11,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/jobs - create new job
 router.post('/', async (req, res) => {
   try {
     const job = new Job(req.body);
@@ -23,7 +21,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/jobs/:id - get one job
 router.get('/:id', async (req, res) => {
   try {
     const job = await Job.findById(req.params.id);
@@ -34,19 +31,12 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// PATCH /api/jobs/:id/status - update job status
 router.patch('/:id/status', async (req, res) => {
   try {
-    const { status, userId } = req.body;
+    const { status } = req.body;
     if (!status) return res.status(400).json({ message: 'Status is required' });
-
     const job = await Job.findById(req.params.id);
     if (!job) return res.status(404).json({ message: 'Job not found' });
-
-    if (userId && job.postedByUserId && job.postedByUserId !== userId) {
-      return res.status(403).json({ message: 'Not authorized to update this job' });
-    }
-
     job.status = status;
     await job.save();
     res.json(job);
@@ -55,7 +45,6 @@ router.patch('/:id/status', async (req, res) => {
   }
 });
 
-// DELETE /api/jobs/:id - admin delete job
 router.delete('/:id', async (req, res) => {
   try {
     const job = await Job.findByIdAndDelete(req.params.id);

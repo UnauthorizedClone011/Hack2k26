@@ -64,6 +64,10 @@ function PitchForm() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [aiLoadingIntro, setAiLoadingIntro] = useState(false);
+  const [aiLoadingWhyMe, setAiLoadingWhyMe] = useState(false);
+  const [aiSuccessIntro, setAiSuccessIntro] = useState(false);
+  const [aiSuccessWhyMe, setAiSuccessWhyMe] = useState(false);
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -73,47 +77,56 @@ function PitchForm() {
         setJob(data);
         setJobError('');
       } catch (err) {
-        setJobError(
-          err.response?.data?.message || 'Job not found or server unavailable.'
-        );
+        setJobError(err.response?.data?.message || 'Job not found.');
       } finally {
         setJobLoading(false);
       }
     };
-
     if (jobId) fetchJob();
   }, [jobId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+  };
+
+  // ✅ FIXED - calls backend instead of Anthropic directly
+  const enhanceWithAI = async (fieldName, fieldValue, setLoadingFn, setSuccessFn) => {
+    if (!fieldValue.trim()) {
+      alert('Please write something first before enhancing with AI!');
+      return;
+    }
+    setLoadingFn(true);
+    setSuccessFn(false);
+    try {
+      const { data } = await axios.post(`${API}/api/enhance`, {
+        fieldName,
+        fieldValue,
+      });
+      if (data.enhancedText) {
+        setForm(prev => ({ ...prev, [fieldName]: data.enhancedText }));
+        setSuccessFn(true);
+        setTimeout(() => setSuccessFn(false), 3000);
+      } else {
+        alert('AI enhancement failed. Please try again.');
+      }
+    } catch (err) {
+      console.error('AI error:', err);
+      alert('AI enhancement failed. Please try again.');
+    } finally {
+      setLoadingFn(false);
     }
   };
 
   const validate = () => {
     const next = {};
-    const required = [
-      'studentName',
-      'college',
-      'intro',
-      'whyMe',
-      'cost',
-      'timeline',
-      'sampleWork',
-    ];
+    const required = ['studentName', 'college', 'intro', 'whyMe', 'cost', 'timeline', 'sampleWork'];
     required.forEach((key) => {
-      if (!String(form[key]).trim()) {
-        next[key] = 'This field is required';
-      }
+      if (!String(form[key]).trim()) next[key] = 'This field is required';
     });
-    if (form.cost && Number(form.cost) <= 0) {
-      next.cost = 'Price must be greater than 0';
-    }
-    if (form.timeline && Number(form.timeline) < 1) {
-      next.timeline = 'Timeline must be at least 1 day';
-    }
+    if (form.cost && Number(form.cost) <= 0) next.cost = 'Price must be greater than 0';
+    if (form.timeline && Number(form.timeline) < 1) next.timeline = 'Timeline must be at least 1 day';
     if (form.portfolioLink.trim() && !/^https?:\/\/.+/i.test(form.portfolioLink)) {
       next.portfolioLink = 'Enter a valid URL (https://...)';
     }
@@ -125,13 +138,11 @@ function PitchForm() {
     e.preventDefault();
     setSubmitError('');
     if (!validate()) return;
-
     setLoading(true);
     try {
       const intro = form.sampleWork.trim()
         ? `${form.intro.trim()}\n\n--- Sample Work ---\n${form.sampleWork.trim()}`
         : form.intro.trim();
-
       const payload = {
         jobId,
         studentName: form.studentName.trim(),
@@ -142,30 +153,21 @@ function PitchForm() {
         timeline: Number(form.timeline),
         portfolioLink: form.portfolioLink.trim(),
       };
-
       await axios.post(`${API}/api/pitches`, payload);
       localStorage.setItem('icockroach_student_name', form.studentName.trim());
       localStorage.setItem('icockroach_student_college', form.college.trim());
       setSuccess(true);
       setForm(initialForm);
     } catch (err) {
-      setSubmitError(
-        err.response?.data?.message || 'Failed to send pitch. Please try again.'
-      );
+      setSubmitError(err.response?.data?.message || 'Failed to send pitch. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const fieldClass = (name) =>
-    `form-field ${errors[name] ? 'form-field-error' : ''}`;
-
+  const fieldClass = (name) => `form-field ${errors[name] ? 'form-field-error' : ''}`;
   const formatDate = (dateStr) =>
-    new Date(dateStr).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
   if (jobLoading) {
     return (
@@ -183,9 +185,7 @@ function PitchForm() {
       <div className="pitch-page">
         <div className="pitch-error-state">
           <p>{jobError || 'Job not found.'}</p>
-          <Link to="/jobs" className="btn-back-jobs">
-            ← Back to Jobs
-          </Link>
+          <Link to="/jobs" className="btn-back-jobs">← Back to Jobs</Link>
         </div>
       </div>
     );
@@ -236,17 +236,12 @@ function PitchForm() {
                 <span className="success-emoji">🎉</span>
                 <h2>Pitch Sent!</h2>
                 <p>The business will review it soon.</p>
-                <Link to="/jobs" className="btn-browse-more">
-                  Browse More Jobs
-                </Link>
-                <Link to="/student-dashboard" className="btn-my-pitches">
-                  Go to Dashboard
-                </Link>
+                <Link to="/jobs" className="btn-browse-more">Browse More Jobs</Link>
+                <Link to="/student-dashboard" className="btn-my-pitches">Go to Dashboard</Link>
               </motion.div>
             ) : (
               <motion.div key="form">
                 <h2 className="form-section-title">Submit Your Pitch ✍️</h2>
-
                 <form className="pitch-form" onSubmit={handleSubmit}>
                   <div className="form-row-2">
                     <div className={fieldClass('studentName')}>
@@ -259,11 +254,8 @@ function PitchForm() {
                         value={form.studentName}
                         onChange={handleChange}
                       />
-                      {errors.studentName && (
-                        <span className="error-msg">{errors.studentName}</span>
-                      )}
+                      {errors.studentName && <span className="error-msg">{errors.studentName}</span>}
                     </div>
-
                     <div className={fieldClass('college')}>
                       <label htmlFor="college">Your College</label>
                       <input
@@ -274,9 +266,7 @@ function PitchForm() {
                         value={form.college}
                         onChange={handleChange}
                       />
-                      {errors.college && (
-                        <span className="error-msg">{errors.college}</span>
-                      )}
+                      {errors.college && <span className="error-msg">{errors.college}</span>}
                     </div>
                   </div>
 
@@ -290,8 +280,34 @@ function PitchForm() {
                       value={form.intro}
                       onChange={handleChange}
                     />
-                    {errors.intro && (
-                      <span className="error-msg">{errors.intro}</span>
+                    {errors.intro && <span className="error-msg">{errors.intro}</span>}
+                    <button
+                      type="button"
+                      onClick={() => enhanceWithAI('intro', form.intro, setAiLoadingIntro, setAiSuccessIntro)}
+                      disabled={aiLoadingIntro}
+                      style={{
+                        marginTop:'8px',
+                        background:'linear-gradient(135deg, #FF6B00, #ff9500)',
+                        color:'white',
+                        border:'none',
+                        padding:'8px 16px',
+                        borderRadius:'8px',
+                        cursor: aiLoadingIntro ? 'not-allowed' : 'pointer',
+                        fontWeight:'bold',
+                        fontSize:'13px',
+                        display:'flex',
+                        alignItems:'center',
+                        gap:'6px',
+                        boxShadow:'0 0 12px rgba(255,107,0,0.4)',
+                        opacity: aiLoadingIntro ? 0.7 : 1,
+                      }}
+                    >
+                      {aiLoadingIntro ? '⏳ Enhancing...' : '✨ Improve Intro with AI'}
+                    </button>
+                    {aiSuccessIntro && (
+                      <p style={{color:'#4ADE80',fontSize:'13px',marginTop:'6px',fontWeight:'bold'}}>
+                        ✨ Intro enhanced by AI!
+                      </p>
                     )}
                   </div>
 
@@ -305,8 +321,34 @@ function PitchForm() {
                       value={form.whyMe}
                       onChange={handleChange}
                     />
-                    {errors.whyMe && (
-                      <span className="error-msg">{errors.whyMe}</span>
+                    {errors.whyMe && <span className="error-msg">{errors.whyMe}</span>}
+                    <button
+                      type="button"
+                      onClick={() => enhanceWithAI('whyMe', form.whyMe, setAiLoadingWhyMe, setAiSuccessWhyMe)}
+                      disabled={aiLoadingWhyMe}
+                      style={{
+                        marginTop:'8px',
+                        background:'linear-gradient(135deg, #FF6B00, #ff9500)',
+                        color:'white',
+                        border:'none',
+                        padding:'8px 16px',
+                        borderRadius:'8px',
+                        cursor: aiLoadingWhyMe ? 'not-allowed' : 'pointer',
+                        fontWeight:'bold',
+                        fontSize:'13px',
+                        display:'flex',
+                        alignItems:'center',
+                        gap:'6px',
+                        boxShadow:'0 0 12px rgba(255,107,0,0.4)',
+                        opacity: aiLoadingWhyMe ? 0.7 : 1,
+                      }}
+                    >
+                      {aiLoadingWhyMe ? '⏳ Enhancing...' : '✨ Enhance with AI'}
+                    </button>
+                    {aiSuccessWhyMe && (
+                      <p style={{color:'#4ADE80',fontSize:'13px',marginTop:'6px',fontWeight:'bold'}}>
+                        ✨ Pitch enhanced by AI!
+                      </p>
                     )}
                   </div>
 
@@ -328,11 +370,8 @@ function PitchForm() {
                       <span className="field-hint">
                         Job budget is ₹{Number(job.budget).toLocaleString('en-IN')}
                       </span>
-                      {errors.cost && (
-                        <span className="error-msg">{errors.cost}</span>
-                      )}
+                      {errors.cost && <span className="error-msg">{errors.cost}</span>}
                     </div>
-
                     <div className={fieldClass('timeline')}>
                       <label htmlFor="timeline">Timeline</label>
                       <div className="timeline-wrap">
@@ -347,9 +386,7 @@ function PitchForm() {
                         />
                         <span className="timeline-suffix">days</span>
                       </div>
-                      {errors.timeline && (
-                        <span className="error-msg">{errors.timeline}</span>
-                      )}
+                      {errors.timeline && <span className="error-msg">{errors.timeline}</span>}
                     </div>
                   </div>
 
@@ -366,9 +403,7 @@ function PitchForm() {
                         onChange={handleChange}
                       />
                     </div>
-                    {errors.portfolioLink && (
-                      <span className="error-msg">{errors.portfolioLink}</span>
-                    )}
+                    {errors.portfolioLink && <span className="error-msg">{errors.portfolioLink}</span>}
                   </div>
 
                   <div className={fieldClass('sampleWork')}>
@@ -381,14 +416,10 @@ function PitchForm() {
                       value={form.sampleWork}
                       onChange={handleChange}
                     />
-                    {errors.sampleWork && (
-                      <span className="error-msg">{errors.sampleWork}</span>
-                    )}
+                    {errors.sampleWork && <span className="error-msg">{errors.sampleWork}</span>}
                   </div>
 
-                  {submitError && (
-                    <p className="submit-error">{submitError}</p>
-                  )}
+                  {submitError && <p className="submit-error">{submitError}</p>}
 
                   <motion.button
                     type="submit"
@@ -425,6 +456,10 @@ function PitchForm() {
                 <li key={tip}>{tip}</li>
               ))}
             </ul>
+            <div style={{marginTop:'20px',padding:'15px',background:'#1a0f00',borderRadius:'8px',border:'1px solid #FF6B00'}}>
+              <p style={{color:'#FF6B00',fontWeight:'bold',margin:'0 0 8px 0',fontSize:'13px'}}>✨ AI Powered</p>
+              <p style={{color:'#888',margin:0,fontSize:'12px'}}>Use the AI buttons to instantly enhance your pitch!</p>
+            </div>
           </motion.div>
         </aside>
       </div>
